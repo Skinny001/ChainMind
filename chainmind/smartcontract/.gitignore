@@ -1,0 +1,16 @@
+# Foundry
+out/
+cache/
+broadcast/
+
+# Environment
+.env*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Forge
+lib/

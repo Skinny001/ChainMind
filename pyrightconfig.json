@@ -1,0 +1,10 @@
+{
+  "venvPath": "chainmind/backend",
+  "venv": "venv",
+  "executionEnvironments": [
+    {
+      "root": "chainmind/backend",
+      "extraPaths": ["."]
+    }
+  ]
+}

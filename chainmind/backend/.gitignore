@@ -1,0 +1,14 @@
+# Python dependencies
+__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+.env
+
+# API Keys & Secrets
+.env*
+!.env.example
+
+# OS
+.DS_Store
