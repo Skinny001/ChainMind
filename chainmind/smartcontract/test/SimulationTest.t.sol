@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../src/VulnerableToken.sol";
@@ -23,6 +23,7 @@ contract SimulationTest is Test {
         token.transfer(user1, 10_000 * 1e18);
         token.transfer(user2, 10_000 * 1e18);
         token.transfer(attacker, 5_000 * 1e18);
+        token.transfer(address(token), 100_000 * 1e18); // Fund the pool for flash loans
     }
 
     function test_ReentrancyAttack() public {

@@ -1,115 +1,101 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
-
-import {Currency} from "v4-core/types/Currency.sol";
+pragma solidity ^0.8.20;
 
 /**
- * @title IPointsHookFactory
- * @notice Interface for the PointsHookFactory contract
- * @dev This interface contains only the essential functions needed for deployment scripts
+ * @title VulnerableToken
+ * @dev A deliberately broken token contract for testing security scanners.
+ * Features: Reentrancy, Unauthorized Minting, Weak Flashloans, and Owner Griefing.
  */
-interface IPointsHookFactory {
+contract VulnerableToken {
+    string public name = "Vulnerable ChainMind Token";
+    string public symbol = "VCT";
+    uint8 public decimals = 18;
+    uint256 public totalSupply;
+    address public owner;
+
+    mapping(address => uint256) public balances;
+    mapping(address => uint256) public staked;
+    mapping(address => bool) public isBlacklisted;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+
+    constructor(uint256 initialSupply) {
+        owner = msg.sender;
+        _mint(msg.sender, initialSupply * 10**decimals);
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return balances[account];
+    }
+
+    // ─── VULNERABILITY 1: Unauthorized Minting ──────────────────────
+    // Missing onlyOwner modifier!
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
+    }
+
+    function _mint(address to, uint256 amount) internal {
+        totalSupply += amount;
+        balances[to] += amount;
+        emit Transfer(address(0), to, amount);
+    }
+
+    // ─── VULNERABILITY 2: Griefing (Self-Blacklisting) ──────────────
+    // Anyone can blacklist anyone!
+    function blacklist(address account) public {
+        isBlacklisted[account] = true;
+    }
+
+    function transfer(address to, uint256 amount) public returns (bool) {
+        require(!isBlacklisted[msg.sender], "Blacklisted");
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        
+        balances[msg.sender] -= amount;
+        balances[to] += amount;
+        emit Transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    // ─── VULNERABILITY 3: Reentrancy In Stake/Withdraw ──────────────
+    function stake(uint256 amount) public {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        staked[msg.sender] += amount;
+        emit Staked(msg.sender, amount);
+    }
+
     /**
-     * @notice Deploy a new PointsHook with pre-mined address and salt
-     * @param targetToken The token that users need to buy to earn points
-     * @param pointsRatio How many units to spend per 1 point
-     * @param baseURI The base URI for the ERC1155 metadata
-     * @param feePercentage Fee percentage in basis points (0-1000)
-     * @param feeThreshold Fee threshold for triggering lottery
-     * @param salt Pre-computed salt from off-chain mining
-     * @param expectedHookAddress Expected address from off-chain mining
-     * @return hook The address of the deployed hook
+     * @dev VULNERABLE: Interaction before effect. 
+     * If the amount is larger than internal balance, it tries to send ETH (just for demo).
      */
-    function deployPointsHook(
-        Currency targetToken,
-        uint256 pointsRatio,
-        string memory baseURI,
-        uint256 feePercentage,
-        uint256 feeThreshold,
-        bytes32 salt,
-        address expectedHookAddress
-    ) external returns (address hook);
-    
-    /**
-     * @notice Creator-friendly function with sensible defaults and pre-mined salt
-     * @param tokenAddress Token address for the points system
-     * @param pointsPerToken Points awarded per token spent
-     * @param metadataURI Base URI for metadata
-     * @param salt Pre-computed salt from off-chain mining
-     * @param expectedHookAddress Expected address from off-chain mining
-     * @return hook The address of the deployed hook
-     */
-    function createPointsSystem(
-        address tokenAddress,
-        uint256 pointsPerToken,
-        string memory metadataURI,
-        bytes32 salt,
-        address expectedHookAddress
-    ) external returns (address hook);
-    
-    /**
-     * @notice Compute the expected hook address for given parameters (for off-chain mining)
-     * @param targetToken The target token
-     * @param pointsRatio Points ratio
-     * @param baseURI Base URI
-     * @param feePercentage Fee percentage
-     * @param feeThreshold Fee threshold
-     * @param salt The salt to use for CREATE2
-     * @return hookAddress The predicted hook address
-     */
-    function computeHookAddress(
-        Currency targetToken,
-        uint256 pointsRatio,
-        string memory baseURI,
-        uint256 feePercentage,
-        uint256 feeThreshold,
-        bytes32 salt
-    ) external view returns (address hookAddress);
-    
-    /**
-     * @notice Compute the expected hook address for createPointsSystem parameters
-     * @param tokenAddress Token address
-     * @param pointsPerToken Points per token
-     * @param metadataURI Metadata URI
-     * @param salt The salt to use for CREATE2
-     * @return hookAddress The predicted hook address
-     */
-    function computePointsSystemAddress(
-        address tokenAddress,
-        uint256 pointsPerToken,
-        string memory metadataURI,
-        bytes32 salt
-    ) external view returns (address hookAddress);
-    
-    /**
-     * @notice Get the platform fee percentage
-     * @return The platform fee percentage in basis points
-     */
-    function platformFEE() external view returns (uint256);
-    
-    /**
-     * @notice Get all hooks deployed by a specific address
-     * @param deployer The deployer address
-     * @return Array of hook addresses
-     */
-    function getHooksByDeployer(address deployer) external view returns (address[] memory);
-    
-    /**
-     * @notice Get total number of deployed hooks
-     * @return The total hook count
-     */
-    function getHookCount() external view returns (uint256);
-    
-    /**
-     * @notice Get hook at specific index
-     * @param index The index
-     * @return The hook address
-     */
-    function getHookAtIndex(uint256 index) external view returns (address);
-    
-    /**
-     * @notice Get the fee recipient address
-     * @return The fee recipient address
-     */
-    function feeRecipient() external view returns (address);
+    function withdraw(uint256 amount) public payable {
+        require(staked[msg.sender] >= amount, "Insufficient stake");
+        
+        // Reentrancy vulnerable: external call before state change
+        (bool success, ) = msg.sender.call{value: 0}(""); // Triggering fallback
+        require(success, "Withdraw failed");
+
+        staked[msg.sender] -= amount;
+        balances[msg.sender] += amount;
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    // ─── VULNERABILITY 4: Insecure Flash Loan ───────────────────
+    function flashLoan(uint256 amount, address borrower, bytes colldata data) public {
+        uint256 balanceBefore = balances[address(this)];
+        require(balances[address(this)] >= amount, "Insufficient pool");
+
+        // Send tokens
+        balances[address(this)] -= amount;
+        balances[borrower] += amount;
+
+        // Callback
+        (bool success, ) = borrower.call(data);
+        require(success, "Callback failed");
+
+        // VULNERABLE: Weak repayment check (doesn't check if balance actually returned)
+        // require(balances[address(this)] >= balanceBefore, "Flash loan not repaid");
+    }
 }
