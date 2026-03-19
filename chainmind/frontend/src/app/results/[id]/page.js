@@ -30,8 +30,8 @@ export default function Results() {
       setData(JSON.parse(cached))
       setLoading(false)
     } else {
-      // API fallback
-      axios.get(`http://127.0.0.1:8000/api/simulation/${id}`)
+   // API fallback
+   axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/simulation/${id}`)
         .then(res => {
           setData(res.data)
           setLoading(false)
@@ -51,13 +51,13 @@ export default function Results() {
     const currentQ = question
     setQuestion("")
     
-    try {
-      const res = await axios.post('http://127.0.0.1:8000/api/query', {
-        simulation_id: id,
-        question: currentQ
-      })
-      setChat(prev => [...prev, { role: 'bot', content: res.data.answer }])
-    } catch (err) {
+      try {
+         const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/query`, {
+            simulation_id: id,
+            question: currentQ
+         })
+         setChat(prev => [...prev, { role: 'bot', content: res.data.answer }])
+      } catch (err) {
       console.error(err)
       setChat(prev => [...prev, { role: 'bot', content: "Error communicating with the agent. Check backend logs." }])
     }

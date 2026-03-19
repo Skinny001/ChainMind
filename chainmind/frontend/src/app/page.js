@@ -60,7 +60,7 @@ export default function Home() {
         }
       }, 5000);
 
-      const response = await axios.post('http://127.0.0.1:8000/api/simulate', formData)
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/simulate`, formData)
       
       clearInterval(pInterval)
       setStep('recording')
