@@ -97,6 +97,4 @@ A modern, dark-mode dashboard built with Next.js & Tailwind CSS.
 | **USDC (Sepolia)** | `0x01C5C0122039549AD1493B8220cABEdD739BC44E` |
 
 ---
-
-## 📜 License
-MIT License. Built with ❤️ for the Celo Ecosystem.
+## Note: you need to have USDC on celo sepolia for a successful transaction on ChainMInd
