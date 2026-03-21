@@ -98,5 +98,4 @@ A modern, dark-mode dashboard built with Next.js & Tailwind CSS.
 
 ---
 
-## 📜 License
-MIT License. Built with ❤️ for the Celo Ecosystem.
+## Note: you need to have USDC on celo sepolia for a successful transaction on ChainMInd
