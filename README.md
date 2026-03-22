@@ -98,4 +98,5 @@ A modern, dark-mode dashboard built with Next.js & Tailwind CSS.
 
 ---
 ##  Built with Gemini + Groq + Mistral AI
+## Demo video : https://drive.google.com/file/d/1pysi0UjwFzCeGb50zXQ77GmntQiOtVNM/view?usp=sharing
 ## Note: you need to have USDC on celo sepolia for a successful transaction on ChainMInd
